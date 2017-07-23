@@ -1,0 +1,8 @@
+result
+BSR
+MNIST_data
+.idea
+*.tgz
+*.jpg
+*.pkl
+
