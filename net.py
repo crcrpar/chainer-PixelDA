@@ -19,39 +19,3 @@ class DigitClassifier(chainer.Chain):
         h = F.relu(self.fc1(h))
         h = F.relu(self.fc2(h))
         return self.fc3(h)
-
-# I cannot the meaning of understand shared and private
-# class PrivateTaskClassifier(chainer.Chain):
-#     def __init__(self):
-#         super(PrivateTaskClassifier, self).__init__()
-#         with self.init_scope():
-#             self.conv = L.Convolution2D(None, 32, ksize=5)
-#
-#     def __call__(self, x):
-#         return F.max_pooling_2d(F.relu(self.conv(x)), ksize=2, stride=2)
-#
-#
-# class SharedTaskClassifier(chainer.Chain):
-#     def __init__(self, n_class):
-#         super(SharedTaskClassifier, self).__init__()
-#         with self.init_scope():
-#             self.conv = L.Convolution2D(None, 48, ksize=5)
-#             self.fc1 = L.Linear(100)
-#             self.fc2 = L.Linear(100)
-#             self.fc3 = L.Linear(n_class)
-#
-#     def __call__(self, x):
-#         h = F.relu(self.fc1(x))
-#         h = F.relu(self.fc2(h))
-#         return F.sigmoid(self.fc3(h))
-#
-#
-# class DigitClassifier(chainer.Chain):
-#     def __init__(self, n_class=10):
-#         super(DigitClassifier, self).__init__()
-#         with self.init_scope():
-#             self.private = PrivateTaskClassifier()
-#             self.shared = SharedTaskClassifier(n_class=n_class)
-#
-#     def __call__(self, x):
-#         return self.shared(self.private(x))
