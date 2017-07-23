@@ -1,0 +1,6 @@
+[submodule "chainer-mnist-m"]
+	path = chainer-mnist-m
+	url = https://github.com/naoto0804/chainer-mnist-m.git
+[submodule "chainer_mnist_m"]
+	path = chainer_mnist_m
+	url = https://github.com/naoto0804/chainer-mnist-m.git
