@@ -20,11 +20,7 @@ from chainer.training import extensions
 from mnist_m import get_mnist_m
 from net import DigitClassifier
 
-
-def gray2rgb(in_data):
-    img, label = in_data
-    img = np.tile(img, (3, 1, 1))
-    return img, label
+from util import gray2rgb
 
 
 def main():

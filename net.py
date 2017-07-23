@@ -1,6 +1,7 @@
 import chainer
 import chainer.functions as F
 import chainer.links as L
+import numpy
 from chainer import cuda
 
 
@@ -38,14 +39,18 @@ class GenResBlock(chainer.Chain):
 
 
 class Generator(chainer.Chain):
-    def __init__(self, n_resblock=6, ch=64, wscale=0.02):
+    def __init__(self, n_hidden=10, n_resblock=6, ch=64, wscale=0.02, res=28):
         super(Generator, self).__init__()
         self.ch = ch
         self.n_resblock = n_resblock
+        self.n_hidden = n_hidden
+        self.res = res
         w = chainer.initializers.Normal(wscale)
         with self.init_scope():
             # TODO ここの合流がマジで謎
-            self.conv1 = None
+            self.fc = L.Linear(None, self.res * self.res, initialW=w)
+            self.conv1 = L.Convolution2D(None, ch, 3, 1, initialW=w)
+            # TODO Improve such redundant initialization using for or something
             self.block1 = GenResBlock(ch, w)
             self.block2 = GenResBlock(ch, w)
             self.block3 = GenResBlock(ch, w)
@@ -54,8 +59,15 @@ class Generator(chainer.Chain):
             self.block6 = GenResBlock(ch, w)
             self.conv2 = L.Convolution2D(None, 3, 3, 1, initialW=w)
 
-    def __call__(self, z):
-        h = None
+    def make_hidden(self, batchsize):
+        return numpy.random.uniform(-1, 1, (batchsize, self.n_hidden, 1, 1)) \
+            .astype(numpy.float32)
+
+    def __call__(self, x, z):
+        n_batch = x.data.shape[0]
+        h = F.concat(
+            (x, F.reshape(self.fc(z), (n_batch, 1, self.res, self.res))),
+            axis=1)
         h = F.relu(self.conv1(h))
         h = self.block1(h)
         h = self.block2(h)
@@ -88,7 +100,7 @@ class DisBlock(chainer.Chain):
 
 
 class Discriminator(chainer.Chain):
-    def __init__(self, ch=1024, wscale=0.02):
+    def __init__(self, ch=512, wscale=0.02):
         super(Discriminator, self).__init__()
         # ch = 512 in mnist-m experiment
         self.ch = ch
