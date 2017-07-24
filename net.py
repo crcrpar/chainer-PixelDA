@@ -47,16 +47,10 @@ class Generator(chainer.Chain):
         self.res = res
         w = chainer.initializers.Normal(wscale)
         with self.init_scope():
-            # TODO ここの合流がマジで謎
             self.fc = L.Linear(None, self.res * self.res, initialW=w)
             self.conv1 = L.Convolution2D(None, ch, 3, 1, initialW=w)
-            # TODO Improve such redundant initialization using for or something
-            self.block1 = GenResBlock(ch, w)
-            self.block2 = GenResBlock(ch, w)
-            self.block3 = GenResBlock(ch, w)
-            self.block4 = GenResBlock(ch, w)
-            self.block5 = GenResBlock(ch, w)
-            self.block6 = GenResBlock(ch, w)
+            for i in range(1, self.n_resblock + 1):
+                setattr(self, 'block{:d}'.format(i), GenResBlock(ch, w))
             self.conv2 = L.Convolution2D(None, 3, 3, 1, initialW=w)
 
     def make_hidden(self, batchsize):
@@ -69,12 +63,8 @@ class Generator(chainer.Chain):
             (x, F.reshape(self.fc(z), (n_batch, 1, self.res, self.res))),
             axis=1)
         h = F.relu(self.conv1(h))
-        h = self.block1(h)
-        h = self.block2(h)
-        h = self.block3(h)
-        h = self.block4(h)
-        h = self.block5(h)
-        h = self.block6(h)
+        for i in range(1, self.n_resblock + 1):
+            h = self['block{:d}'.format(i)](h)
         return F.tanh(self.conv2(h))
 
 
@@ -104,21 +94,18 @@ class Discriminator(chainer.Chain):
         super(Discriminator, self).__init__()
         # ch = 512 in mnist-m experiment
         self.ch = ch
+        self.n_ch_list = [ch // 8, ch // 4, ch // 2, ch]
         w = chainer.initializers.Normal(wscale)
         with self.init_scope():
             self.conv = L.Convolution2D(None, 64, 3, 1, initialW=w)
             self.bn = L.BatchNormalization(64, use_gamma=False)
-            self.block1 = DisBlock(ch // 8, initialW=w)
-            self.block2 = DisBlock(ch // 4, initialW=w)
-            self.block3 = DisBlock(ch // 2, initialW=w)
-            self.block4 = DisBlock(ch, initialW=w)
+            for i, n_ch in enumerate(self.n_ch_list):
+                setattr(self, 'block{:d}'.format(i + 1), DisBlock(n_ch, w))
             self.fc = L.Linear(None, 1, initialW=w)
 
     def __call__(self, x):
         h = add_noise(x)
         h = F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(h)))), 0.9)
-        h = self.block1(h)
-        h = self.block2(h)
-        h = self.block3(h)
-        h = self.block4(h)
+        for i in range(1, len(self.n_ch_list) + 1):
+            h = self['block{:d}'.format(i)](h)
         return self.fc(h)
