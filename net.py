@@ -27,8 +27,10 @@ class GenResBlock(chainer.Chain):
     def __init__(self, out_channel, w):
         super(GenResBlock, self).__init__()
         with self.init_scope():
-            self.conv1 = L.Convolution2D(None, out_channel, 3, 1, initialW=w)
-            self.conv2 = L.Convolution2D(None, out_channel, 3, 1, initialW=w)
+            self.conv1 = L.Convolution2D(None, out_channel, ksize=3, stride=1,
+                                         pad=1, initialW=w)
+            self.conv2 = L.Convolution2D(None, out_channel, ksize=3, stride=1,
+                                         pad=1, initialW=w)
             self.bn1 = L.BatchNormalization(out_channel, use_gamma=False)
             self.bn2 = L.BatchNormalization(out_channel, use_gamma=False)
 
@@ -48,10 +50,12 @@ class Generator(chainer.Chain):
         w = chainer.initializers.Normal(wscale)
         with self.init_scope():
             self.fc = L.Linear(None, self.res * self.res, initialW=w)
-            self.conv1 = L.Convolution2D(None, ch, 3, 1, initialW=w)
+            self.conv1 = L.Convolution2D(None, ch, ksize=3, stride=1, pad=1,
+                                         initialW=w)
             for i in range(1, self.n_resblock + 1):
                 setattr(self, 'block{:d}'.format(i), GenResBlock(ch, w))
-            self.conv2 = L.Convolution2D(None, 3, 3, 1, initialW=w)
+            self.conv2 = L.Convolution2D(None, 3, ksize=3, stride=1, pad=1,
+                                         initialW=w)
 
     def make_hidden(self, batchsize):
         return numpy.random.uniform(-1, 1, (batchsize, self.n_hidden, 1, 1)) \
@@ -80,8 +84,8 @@ class DisBlock(chainer.Chain):
     def __init__(self, out_channel, initialW):
         super(DisBlock, self).__init__()
         with self.init_scope():
-            self.conv = L.Convolution2D(None, out_channel, 3, 2,
-                                        initialW=initialW)
+            self.conv = L.Convolution2D(None, out_channel, ksize=3, stride=2,
+                                        pad=1, initialW=initialW)
             self.bn = L.BatchNormalization(out_channel, use_gamma=False)
 
     def __call__(self, x):
@@ -97,7 +101,8 @@ class Discriminator(chainer.Chain):
         self.n_ch_list = [ch // 8, ch // 4, ch // 2, ch]
         w = chainer.initializers.Normal(wscale)
         with self.init_scope():
-            self.conv = L.Convolution2D(None, 64, 3, 1, initialW=w)
+            self.conv = L.Convolution2D(None, 64, ksize=3, stride=1, pad=1,
+                                        initialW=w)
             self.bn = L.BatchNormalization(64, use_gamma=False)
             for i, n_ch in enumerate(self.n_ch_list):
                 setattr(self, 'block{:d}'.format(i + 1), DisBlock(n_ch, w))

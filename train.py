@@ -21,6 +21,7 @@ from mnist_m import get_mnist_m
 from net import DigitClassifier
 
 from util import gray2rgb
+from util import scale
 
 
 def main():
@@ -65,9 +66,13 @@ def main():
     if args.train_type == 'source_only':
         train, _ = chainer.datasets.get_mnist(ndim=3)
         train = TransformDataset(train, transform=gray2rgb)
+        train = TransformDataset(train, transform=scale)
     elif args.train_type == 'target_only':
         train = get_mnist_m('train', withlabel=True)
+        train = TransformDataset(train, transform=scale)
+
     test = get_mnist_m('test', withlabel=True)
+    test = TransformDataset(test, transform=scale)
 
     train_iter = MultiprocessIterator(train, args.batchsize,
                                       n_processes=args.n_processes)

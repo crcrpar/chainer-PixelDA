@@ -7,16 +7,16 @@ from chainer import training
 from chainer.datasets import TransformDataset
 from chainer.iterators import MultiprocessIterator
 from chainer.training import extensions
-from updater import DCGANUpdater
 
 from mnist_m import get_mnist_m
+from net import DigitClassifier
 from net import Discriminator
 from net import Generator
+from updater import UPLDAGANUpdater
 from util import gray2rgb
+from util import scale
 
-# In the case of MNIST -> MNIST-M
-params = {'base_lr': 1e-3, 'adam_alpha': 1e-3, 'dis_loss': 0.13,
-          'gen_loss': 0.011, 'task_loss': 0.01}
+from opt import params
 
 
 def main():
@@ -51,36 +51,40 @@ def main():
     # Set up a neural network to train
     gen = Generator()
     dis = Discriminator()
+    cls = DigitClassifier()
 
     if args.gpu >= 0:
-        # Make a specified GPU current
         chainer.cuda.get_device_from_id(args.gpu).use()
-        gen.to_gpu()  # Copy the model to the GPU
+        gen.to_gpu()
         dis.to_gpu()
+        cls.to_gpu()
 
     # Setup an optimizer
-    def make_optimizer(model, beta1=0.5):
-        optimizer = chainer.optimizers.Adam(alpha=params['base_lr'],
-                                            beta1=beta1)
+    def make_optimizer(model, **kwargs):
+        optimizer = chainer.optimizers.Adam(**kwargs)
         optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(1e-5), 'hook_dec')
+        optimizer.add_hook(chainer.optimizer.WeightDecay(1e-5))
         return optimizer
 
-    opt_gen = make_optimizer(gen)
-    opt_dis = make_optimizer(dis)
+    opt_gen = make_optimizer(gen, alpha=params['base_lr'], beta1=0.5)
+    opt_dis = make_optimizer(dis, alpha=params['base_lr'], beta1=0.5)
+    opt_cls = make_optimizer(cls, alpha=params['base_lr'], beta1=0.5)
 
-    def load_dataset(name):
+    def load_dataset(name, dtype='train'):
         if name == 'mnist':
-            train, _ = chainer.datasets.get_mnist(withlabel=False, ndim=3)
-            return TransformDataset(train, transform=gray2rgb)
+            train, _ = chainer.datasets.get_mnist(withlabel=True, ndim=3)
+            dataset = TransformDataset(train, transform=gray2rgb)
+            return TransformDataset(dataset, transform=scale)
         elif name == 'mnist_m':
-            return get_mnist_m('train', withlabel=False)
+            dataset = get_mnist_m(dtype, withlabel=True)
+            return TransformDataset(dataset, transform=scale)
         else:
             raise NotImplementedError
 
     source = load_dataset(args.source)
-    target = load_dataset(args.target)
-    exit()
+    target = load_dataset(args.target, dtype='train')
+    # test = load_dataset(args.target, dtype='valid', withlabel=True)
+    # test = load_dataset(args.target, dtype='test', withlabel=True)
 
     source_iter = MultiprocessIterator(
         source, args.batchsize, n_processes=args.n_processes)
@@ -88,11 +92,11 @@ def main():
         target, args.batchsize, n_processes=args.n_processes)
 
     # Set up a trainer
-    updater = DCGANUpdater(
-        models=(gen, dis),
-        iterator={'source': source_iter, 'target': target_iter},
+    updater = UPLDAGANUpdater(
+        models=(gen, dis, cls),
+        iterator={'main': source_iter, 'target': target_iter},
         optimizer={
-            'gen': opt_gen, 'dis': opt_dis},
+            'gen': opt_gen, 'dis': opt_dis, 'cls': opt_cls},
         device=args.gpu)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
 
@@ -107,7 +111,7 @@ def main():
         dis, 'dis_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
     trainer.extend(extensions.LogReport(trigger=display_interval))
     trainer.extend(extensions.PrintReport([
-        'epoch', 'iteration', 'gen/loss', 'dis/loss',
+        'epoch', 'iteration', 'gen/loss', 'dis/loss', 'cls/loss',
     ]), trigger=display_interval)
     trainer.extend(extensions.ProgressBar(update_interval=10))
     # trainer.extend(
