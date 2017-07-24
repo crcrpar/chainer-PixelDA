@@ -80,6 +80,7 @@ def main():
 
     source = load_dataset(args.source)
     target = load_dataset(args.target)
+    exit()
 
     source_iter = MultiprocessIterator(
         source, args.batchsize, n_processes=args.n_processes)
