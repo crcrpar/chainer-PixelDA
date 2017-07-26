@@ -29,7 +29,7 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
         source_image, source_label = [Variable(x) for x in
                                       self.converter(source_batch,
                                                      self.device)]
-        noise = Variable(xp.asarray(self.gen.make_hidden(batchsize)))
+        # noise = Variable(xp.asarray(self.gen.make_hidden(batchsize)))
         x_fake = self.gen(source_image, noise)
         y_fake = self.dis(x_fake)
 
