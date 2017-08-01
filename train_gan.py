@@ -3,6 +3,7 @@
 import argparse
 
 import chainer
+import chainer.links as L
 from chainer import training
 from chainer.datasets import TransformDataset
 from chainer.iterators import MultiprocessIterator
@@ -16,6 +17,9 @@ from opt import params
 from updater import UPLDAGANUpdater
 from util import gray2rgb
 from util import scale
+
+
+from module_for_debug import Evaluator
 
 
 def main():
@@ -50,7 +54,7 @@ def main():
     # Set up a neural network to train
     gen = Generator()
     dis = Discriminator()
-    cls = DigitClassifier()
+    cls = L.Classifier(DigitClassifier())
 
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
@@ -81,23 +85,34 @@ def main():
             raise NotImplementedError
 
     source = load_dataset(args.source)
-    target = load_dataset(args.target, dtype='train')
-    # test = load_dataset(args.target, dtype='valid', withlabel=True)
-    # test = load_dataset(args.target, dtype='test', withlabel=True)
+
+    # This is for debug
+    # from chainer.datasets import split_dataset
+    # source, _ = split_dataset(source, split_at=1000)
+
+    target_train = load_dataset(args.target, dtype='train')
+    target_test = load_dataset(args.target, dtype='test')
 
     source_iter = MultiprocessIterator(
         source, args.batchsize, n_processes=args.n_processes)
-    target_iter = MultiprocessIterator(
-        target, args.batchsize, n_processes=args.n_processes)
+    target_train_iter = MultiprocessIterator(
+        target_train, args.batchsize, n_processes=args.n_processes)
+    target_test_iter = MultiprocessIterator(
+        target_test, args.batchsize, n_processes=args.n_processes,
+        repeat=False, shuffle=False)
 
     # Set up a trainer
     updater = UPLDAGANUpdater(
         models=(gen, dis, cls),
-        iterator={'main': source_iter, 'target': target_iter},
+        iterator={'main': source_iter, 'target': target_train_iter},
         optimizer={
             'gen': opt_gen, 'dis': opt_dis, 'cls': opt_cls},
         device=args.gpu)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
+
+    # Evaluate the model with the test dataset for each epoch
+    trainer.extend(
+        extensions.Evaluator(target_test_iter, cls, device=args.gpu))
 
     snapshot_interval = (args.snapshot_interval, 'iteration')
     display_interval = (args.display_interval, 'iteration')
@@ -112,6 +127,7 @@ def main():
     trainer.extend(extensions.LogReport(trigger=display_interval))
     trainer.extend(extensions.PrintReport([
         'epoch', 'iteration', 'gen/loss', 'dis/loss', 'cls/loss',
+        'validation/main/accuracy'
     ]), trigger=display_interval)
     trainer.extend(extensions.ProgressBar(update_interval=10))
     # trainer.extend(

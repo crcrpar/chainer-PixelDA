@@ -40,10 +40,9 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
         loss_gen = F.sum(F.softplus(-y_fake)) / batchsize
         loss_gen *= params['gen_loss']
 
-        loss_cls = F.softmax_cross_entropy(
-            self.cls(source_image), source_label) / batchsize
-        loss_cls += F.softmax_cross_entropy(self.cls(x_fake),
-                                            source_label) / batchsize
+        loss_cls = self.cls(source_image, source_label)
+        loss_cls += self.cls(x_fake, source_label)
+
         loss_cls *= params['task_loss']
 
         """
