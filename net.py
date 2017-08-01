@@ -36,7 +36,7 @@ class GenResBlock(chainer.Chain):
 
     def __call__(self, x):
         h = F.relu(self.bn1(self.conv1(x)))
-        h = x + self.bn1(self.conv1(h))
+        h = x + self.bn2(self.conv2(h))
         return h
 
 
@@ -47,8 +47,8 @@ class Generator(chainer.Chain):
         self.n_resblock = n_resblock
         self.n_hidden = n_hidden
         self.res = res
-        w = chainer.initializers.Normal(wscale)
         with self.init_scope():
+            w = chainer.initializers.Normal(wscale)
             self.fc = L.Linear(None, self.res * self.res, initialW=w)
             self.conv1 = L.Convolution2D(None, ch, ksize=3, stride=1, pad=1,
                                          initialW=w)

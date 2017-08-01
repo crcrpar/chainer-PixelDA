@@ -12,18 +12,17 @@ from mnist_m import get_mnist_m
 from net import DigitClassifier
 from net import Discriminator
 from net import Generator
+from opt import params
 from updater import UPLDAGANUpdater
 from util import gray2rgb
 from util import scale
-
-from opt import params
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batchsize', '-b', type=int, default=32,
                         help='Number of images in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=1000,
+    parser.add_argument('--epoch', '-e', type=int, default=10,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', type=int, default=-1,
                         help='GPU ID (negative value indicates CPU)')
@@ -37,7 +36,7 @@ def main():
                         help='Random seed of z at visualization stage')
     parser.add_argument('--snapshot_interval', type=int, default=1000,
                         help='Interval of snapshot')
-    parser.add_argument('--display_interval', type=int, default=100,
+    parser.add_argument('--display_interval', type=int, default=10,
                         help='Interval of displaying log to console')
     parser.add_argument('--n_processes', type=int, default=8,
                         help='Interval of displaying log to console')
@@ -102,6 +101,7 @@ def main():
 
     snapshot_interval = (args.snapshot_interval, 'iteration')
     display_interval = (args.display_interval, 'iteration')
+
     trainer.extend(
         extensions.snapshot(filename='snapshot_iter_{.updater.iteration}.npz'),
         trigger=snapshot_interval)
