@@ -56,18 +56,16 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
 
         self.gen.cleargrads()
         loss_gen.backward()
-        # from IPython import embed
-        # embed()
         gen_optimizer.update()
         x_fake.unchain_backward()
+        chainer.report({'loss': loss_gen}, self.gen)
 
         self.dis.cleargrads()
         loss_dis.backward()
         dis_optimizer.update()
+        chainer.report({'loss': loss_dis}, self.dis)
 
         self.cls.cleargrads()
         loss_cls.backward()
         cls_optimizer.update()
-        chainer.report({'loss': loss_dis}, self.dis)
-        chainer.report({'loss': loss_gen}, self.gen)
         chainer.report({'loss': loss_cls}, self.cls)

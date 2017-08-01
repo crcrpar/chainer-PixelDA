@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 
+import matplotlib
+matplotlib.use('Agg')
+
 import argparse
 
 import chainer
 import chainer.links as L
+
 from chainer import training
 from chainer.datasets import TransformDataset
 from chainer.iterators import MultiprocessIterator
 from chainer.training import extensions
 
+from extension import out_generated_image
 from mnist_m import get_mnist_m
 from net import DigitClassifier
 from net import Discriminator
@@ -82,16 +87,15 @@ def main():
             raise NotImplementedError
 
     source = load_dataset(args.source)
+    from chainer.datasets import split_dataset
+    source, _ = split_dataset(source, split_at=1000)
+
     target_train = load_dataset(args.target, dtype='train')
-    target_test = load_dataset(args.target, dtype='test')
 
     source_iter = MultiprocessIterator(
         source, args.batchsize, n_processes=args.n_processes)
     target_train_iter = MultiprocessIterator(
         target_train, args.batchsize, n_processes=args.n_processes)
-    target_test_iter = MultiprocessIterator(
-        target_test, args.batchsize, n_processes=args.n_processes,
-        repeat=False, shuffle=False)
 
     # Set up a trainer
     updater = UPLDAGANUpdater(
@@ -101,10 +105,6 @@ def main():
             'gen': opt_gen, 'dis': opt_dis, 'cls': opt_cls},
         device=args.gpu)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
-
-    # Evaluate the model with the test dataset for each epoch
-    trainer.extend(
-        extensions.Evaluator(target_test_iter, cls, device=args.gpu))
 
     snapshot_interval = (args.snapshot_interval, 'iteration')
     display_interval = (args.display_interval, 'iteration')
@@ -122,11 +122,18 @@ def main():
         'validation/main/accuracy'
     ]), trigger=display_interval)
     trainer.extend(extensions.ProgressBar(update_interval=10))
+
+    # Dump examples of generated images for every epoch
+    trainer.extend(out_generated_image(source_iter, gen, args.gpu, args.out),
+                   trigger=(1, 'epoch'))
+
+    # Evaluate the model with the test dataset for each epoch
+    # target_test = load_dataset(args.target, dtype='test')
+    # target_test_iter = MultiprocessIterator(
+    #     target_test, args.batchsize, n_processes=args.n_processes,
+    #     repeat=False, shuffle=False)
     # trainer.extend(
-    #     out_generated_image(
-    #         gen, dis,
-    #         10, 10, args.seed, args.out),
-    #     trigger=snapshot_interval)
+    #     extensions.Evaluator(target_test_iter, cls, device=args.gpu))
 
     # Visualize computational graph for debug
     # trainer.extend(extensions.dump_graph('gen/loss', out_name='gen.dot'))
