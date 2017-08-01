@@ -19,9 +19,6 @@ from util import gray2rgb
 from util import scale
 
 
-from module_for_debug import Evaluator
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batchsize', '-b', type=int, default=32,
@@ -85,11 +82,6 @@ def main():
             raise NotImplementedError
 
     source = load_dataset(args.source)
-
-    # This is for debug
-    # from chainer.datasets import split_dataset
-    # source, _ = split_dataset(source, split_at=1000)
-
     target_train = load_dataset(args.target, dtype='train')
     target_test = load_dataset(args.target, dtype='test')
 
@@ -135,6 +127,11 @@ def main():
     #         gen, dis,
     #         10, 10, args.seed, args.out),
     #     trigger=snapshot_interval)
+
+    # Visualize computational graph for debug
+    # trainer.extend(extensions.dump_graph('gen/loss', out_name='gen.dot'))
+    # trainer.extend(extensions.dump_graph('dis/loss', out_name='dis.dot'))
+    # trainer.extend(extensions.dump_graph('cls/loss', out_name='cls.dot'))
 
     if args.resume:
         # Resume from a snapshot
