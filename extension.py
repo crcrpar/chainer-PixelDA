@@ -9,7 +9,7 @@ from chainer.dataset import convert
 
 
 def out_generated_image(iterator, generator, device, dst):
-    @chainer.training.make_extension()
+    @chainer.training.make_extension(trigger=(1, 'epoch'))
     def make_image(trainer):
         batch = iterator.next()
         source, _ = convert.concat_examples(batch, device)
@@ -44,5 +44,6 @@ def out_generated_image(iterator, generator, device, dst):
             os.makedirs(preview_dir)
         plt.savefig(os.path.join(preview_dir, 'epoch{:d}.png'.format(
             trainer.updater.epoch)))
+        plt.close()
 
     return make_image
