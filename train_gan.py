@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import matplotlib
+
 matplotlib.use('Agg')
 
 import argparse
@@ -87,8 +88,8 @@ def main():
             raise NotImplementedError
 
     source = load_dataset(args.source)
-    from chainer.datasets import split_dataset
-    source, _ = split_dataset(source, split_at=1000)
+    # from chainer.datasets import split_dataset
+    # source, _ = split_dataset(source, split_at=1000)
 
     target_train = load_dataset(args.target, dtype='train')
 
@@ -112,10 +113,6 @@ def main():
     trainer.extend(
         extensions.snapshot(filename='snapshot_iter_{.updater.iteration}.npz'),
         trigger=snapshot_interval)
-    trainer.extend(extensions.snapshot_object(
-        gen, 'gen_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
-    trainer.extend(extensions.snapshot_object(
-        dis, 'dis_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
     trainer.extend(extensions.LogReport(trigger=display_interval))
     trainer.extend(extensions.PrintReport([
         'epoch', 'iteration', 'gen/loss', 'dis/loss', 'cls/loss',
@@ -123,17 +120,26 @@ def main():
     ]), trigger=display_interval)
     trainer.extend(extensions.ProgressBar(update_interval=10))
 
+    # Save two plot images to the result dir
+    if extensions.PlotReport.available():
+        trainer.extend(
+            extensions.PlotReport(['gen/loss', 'dis/loss', 'cls/loss'],
+                                  'iteration', file_name='loss.png'))
+        trainer.extend(
+            extensions.PlotReport(['validation/main/accuracy'],
+                                  'epoch', file_name='accuracy.png'))
+
     # Dump examples of generated images for every epoch
     trainer.extend(out_generated_image(source_iter, gen, args.gpu, args.out),
                    trigger=(1, 'epoch'))
 
     # Evaluate the model with the test dataset for each epoch
-    # target_test = load_dataset(args.target, dtype='test')
-    # target_test_iter = MultiprocessIterator(
-    #     target_test, args.batchsize, n_processes=args.n_processes,
-    #     repeat=False, shuffle=False)
-    # trainer.extend(
-    #     extensions.Evaluator(target_test_iter, cls, device=args.gpu))
+    target_test = load_dataset(args.target, dtype='test')
+    target_test_iter = MultiprocessIterator(
+        target_test, args.batchsize, n_processes=args.n_processes,
+        repeat=False, shuffle=False)
+    trainer.extend(
+        extensions.Evaluator(target_test_iter, cls, device=args.gpu))
 
     # Visualize computational graph for debug
     # trainer.extend(extensions.dump_graph('gen/loss', out_name='gen.dot'))
