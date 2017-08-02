@@ -33,6 +33,8 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
         x_fake = self.gen(source_image, noise)
         y_fake = self.dis(x_fake)
 
+        # sigmoid_cross_entropy(x,1) = softplus(-x)
+        # sigmoid_cross_entropy(x,0) = softplus(x)
         loss_dis = F.sum(F.softplus(-y_real)) / batchsize
         loss_dis += F.sum(F.softplus(y_fake)) / batchsize
         loss_dis *= params['dis_loss']
@@ -57,15 +59,15 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
         self.gen.cleargrads()
         loss_gen.backward()
         gen_optimizer.update()
-        x_fake.unchain_backward()
         chainer.report({'loss': loss_gen}, self.gen)
+
+        self.cls.cleargrads()
+        loss_cls.backward()
+        cls_optimizer.update()
+        x_fake.unchain_backward()
+        chainer.report({'loss': loss_cls}, self.cls)
 
         self.dis.cleargrads()
         loss_dis.backward()
         dis_optimizer.update()
         chainer.report({'loss': loss_dis}, self.dis)
-
-        self.cls.cleargrads()
-        loss_cls.backward()
-        cls_optimizer.update()
-        chainer.report({'loss': loss_cls}, self.cls)
