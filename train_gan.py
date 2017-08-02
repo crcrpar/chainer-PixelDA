@@ -29,7 +29,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batchsize', '-b', type=int, default=32,
                         help='Number of images in each mini-batch')
-    parser.add_argument('--epoch', '-e', type=int, default=20,
+    parser.add_argument('--epoch', '-e', type=int, default=100,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', type=int, default=-1,
                         help='GPU ID (negative value indicates CPU)')
@@ -62,15 +62,17 @@ def main():
         cls.to_gpu()
 
     # Setup an optimizer
-    def make_optimizer(model, **kwargs):
-        optimizer = chainer.optimizers.Adam(**kwargs)
+    def make_optimizer(model):
+        optimizer = chainer.optimizers.Adam(alpha=params['base_lr'],
+                                            beta1=params['beta1'])
         optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(1e-5))
+        optimizer.add_hook(
+            chainer.optimizer.WeightDecay(params['weight_decay']))
         return optimizer
 
-    opt_gen = make_optimizer(gen, alpha=params['base_lr'], beta1=0.5)
-    opt_dis = make_optimizer(dis, alpha=params['base_lr'], beta1=0.5)
-    opt_cls = make_optimizer(cls, alpha=params['base_lr'], beta1=0.5)
+    opt_gen = make_optimizer(gen)
+    opt_dis = make_optimizer(dis)
+    opt_cls = make_optimizer(cls)
 
     def load_dataset(name, dtype='train'):
         if name == 'mnist':
@@ -107,6 +109,9 @@ def main():
     display_interval = (10, 'iteration')
 
     trainer.extend(
+        extensions.ExponentialShift('alpha', params['alpha_decay_rate']),
+        trigger=(params['alpha_decay_steps'], 'iteration'))
+    trainer.extend(
         extensions.snapshot(filename='snapshot_epoch_{.updater.epoch}.npz'),
         trigger=snapshot_interval)
     trainer.extend(extensions.LogReport(trigger=display_interval))
@@ -120,7 +125,8 @@ def main():
     if extensions.PlotReport.available():
         trainer.extend(
             extensions.PlotReport(['gen/loss', 'dis/loss', 'cls/loss'],
-                                  'iteration', trigger=(100, 'iteration'), file_name='loss.png'))
+                                  'iteration', trigger=(100, 'iteration'),
+                                  file_name='loss.png'))
         trainer.extend(
             extensions.PlotReport(['validation/main/accuracy'],
                                   'epoch', file_name='accuracy.png'))

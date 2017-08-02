@@ -4,6 +4,8 @@ import chainer.links as L
 import numpy
 from chainer import cuda
 
+from opt import params
+
 
 class DigitClassifier(chainer.Chain):
     def __init__(self, n_class=10):
@@ -31,8 +33,8 @@ class GenResBlock(chainer.Chain):
                                          pad=1, initialW=w)
             self.conv2 = L.Convolution2D(None, out_channel, ksize=3, stride=1,
                                          pad=1, initialW=w)
-            self.bn1 = L.BatchNormalization(out_channel, use_gamma=False)
-            self.bn2 = L.BatchNormalization(out_channel, use_gamma=False)
+            self.bn1 = L.BatchNormalization(out_channel, eps=params['bn_eps'])
+            self.bn2 = L.BatchNormalization(out_channel, eps=params['bn_eps'])
 
     def __call__(self, x):
         h = F.relu(self.bn1(self.conv1(x)))
@@ -85,11 +87,13 @@ class DisBlock(chainer.Chain):
         with self.init_scope():
             self.conv = L.Convolution2D(None, out_channel, ksize=3, stride=2,
                                         pad=1, initialW=initialW)
-            self.bn = L.BatchNormalization(out_channel, use_gamma=False)
+            # TODO check if use_gamma=False is OK
+            self.bn = L.BatchNormalization(out_channel, eps=params['bn_eps'],
+                                           use_gamma=False)
 
     def __call__(self, x):
         # TODO check if the position of add_noise is OK
-        return F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(x)))), 0.9)
+        return F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(x)))), params['dropout_prob'])
 
 
 class Discriminator(chainer.Chain):
@@ -109,7 +113,8 @@ class Discriminator(chainer.Chain):
     def __call__(self, x):
         h = add_noise(x)
         #  No bn for the first input
-        h = F.dropout(F.leaky_relu(add_noise(self.conv(h))), 0.1)
+        h = add_noise(
+            F.dropout(F.leaky_relu(self.conv(h)), params['dropout_prob']))
         for i in range(1, len(self.n_ch_list) + 1):
             h = self['block{:d}'.format(i)](h)
         return self.fc(h)
