@@ -58,13 +58,12 @@ class Generator(chainer.Chain):
                                          initialW=w)
 
     def make_hidden(self, batchsize):
-        return numpy.random.uniform(-1, 1, (batchsize, self.n_hidden, 1, 1)) \
+        return numpy.random.uniform(-1, 1, (batchsize, self.n_hidden)) \
             .astype(numpy.float32)
 
     def __call__(self, x, z):
-        n_batch = x.data.shape[0]
         h = F.concat(
-            (x, F.reshape(self.fc(z), (n_batch, 1, self.res, self.res))),
+            (x, F.reshape(self.fc(z), (-1, 1, self.res, self.res))),
             axis=1)
         h = F.relu(self.conv1(h))
         for i in range(1, self.n_resblock + 1):
@@ -103,14 +102,14 @@ class Discriminator(chainer.Chain):
         with self.init_scope():
             self.conv = L.Convolution2D(None, 64, ksize=3, stride=1, pad=1,
                                         initialW=w)
-            self.bn = L.BatchNormalization(64, use_gamma=False)
             for i, n_ch in enumerate(self.n_ch_list):
                 setattr(self, 'block{:d}'.format(i + 1), DisBlock(n_ch, w))
             self.fc = L.Linear(None, 1, initialW=w)
 
     def __call__(self, x):
         h = add_noise(x)
-        h = F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(h)))), 0.9)
+        #  No bn for the first input
+        h = F.dropout(F.leaky_relu(add_noise(self.conv(h))), 0.1)
         for i in range(1, len(self.n_ch_list) + 1):
             h = self['block{:d}'.format(i)](h)
         return self.fc(h)
