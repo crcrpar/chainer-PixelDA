@@ -18,12 +18,12 @@ def out_generated_image(iterator, generator, device, dst):
         n_images = source.shape[0]
 
         noise = Variable(xp.asarray(generator.make_hidden(n_images)))
-        with chainer.no_backprop_mode():
+        with chainer.using_config('train', False):
             result = generator(source, noise)
 
         # to cpu
         result = chainer.cuda.to_cpu(result.data)
-        result = (result + 1.0) / 2.0
+        result = (result + 1.0) / 2.0  # [-1, 1] -> [0, 1]
 
         n_column = 8
         n_row = n_images // n_column
