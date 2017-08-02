@@ -30,3 +30,4 @@ For more details. please refer to mnist_m.py
 
 ## References
 - [1]: K. Bousmalis, et al. "Unsupervised Pixel-Level Domain Adaptation with Generative Adversarial Networks.", in CVPR, 2017.
+- [2]: [Original implementation](https://github.com/tensorflow/models/tree/master/domain_adaptation) 
