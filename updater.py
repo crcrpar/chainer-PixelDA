@@ -50,12 +50,11 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
         loss_cls *= params['task_loss']
 
         """
-            In the original paper, 
-            During the first step, we update the discriminator and 
-            task-specific parameters θD, θT, while keeping 
+            In the original paper,
+            During the first step, we update the discriminator and
+            task-specific parameters θD, θT, while keeping
             the generator parameters θG fixed.
             During the second step we fix θD, θT and update θG.
-            However, we swap it because of the effeciency
         """
 
         self.gen.cleargrads()
