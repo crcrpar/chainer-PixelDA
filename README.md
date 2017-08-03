@@ -1,32 +1,44 @@
-# chainer-bousmaliscvpr2017
+# chainer-PixelDA
 
-This is chainer re-implementation of a paper, Unsupervised Pixel-Level Domain Adaptation with Generative Adversarial Networks [Bousmalis+, CVPR2017].
-
+This is an unofficial chainer re-implementation of a paper, Unsupervised Pixel-Level Domain Adaptation with Generative Adversarial Networks [Bousmalis+, CVPR2017].
 
 ## Requirements
+- Python 3.5+
 - Chainer 2.0+
 - Numpy
-
-<!--
-## Preprocess
-
-1. Download BSDS dataset for background ``` $ wget http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/BSR/BSR_bsds500.tgz```
-2. Decompress the dataset ``` $ tar -zxvf BSR_bsds500.tgz```
-3. Create MNIST-M dataset ``` $ python create_mnist_m.py ```
+- Matplotlib
 
 ## Usage
-```
-from mnist_m import get_mnist_m  
-train = get_mnist_m(split='train', withlabel=False)  #  Get train subset, images only, scaled to [0, 1)
-test = get_mnist_m(split='test', withlabel=True, scale=255.0)  #  Get test subset, images + labels, scaled to [0, 255)
-```
-For more details. please refer to mnist_m.py
 
-## Examples
-``` $ python demo.py ```
+### Training source-only model (training on MNIST, test on MNIST-M)
+```
+python train.py source_only --gpu gpuno --out directory_out
+```
 
-![example](example.jpg)
- -->
+### Training target-only model (training on MNIST-M, test on MNIST-M)
+```
+python train.py target_only --gpu gpuno --out directory_out
+```
+
+### Training PixelDA model (training on MNIST-M, test on MNIST-M)
+```
+python train_gan.py --gpu gpuno --out directory_out
+```
+
+![generated](pixelda_result.png)
+
+![loss](pixelda_loss.png)
+![accuracy](pixelda_accuracy.png)
+
+## Performance on MNIST -> MNIST-M
+
+Note that this is not reproduced perfectly.
+
+| Method | Original [1] | Ours |
+|:-:|:-:|:-:|
+| Source-only | 63.6 % |  60.4 % (20 epoch)|
+| Target-only | 96.4 % |  95.9 % (20 epoch)|
+| PixelDA | 98.2 %  |  97.6 % (100 epoch) |
 
 ## References
 - [1]: K. Bousmalis, et al. "Unsupervised Pixel-Level Domain Adaptation with Generative Adversarial Networks.", in CVPR, 2017.
