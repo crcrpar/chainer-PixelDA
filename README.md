@@ -8,6 +8,16 @@ This is an unofficial chainer re-implementation of a paper, Unsupervised Pixel-L
 - Numpy
 - Matplotlib
 
+## Performance on MNIST -> MNIST-M
+
+Note that this is not reproduced perfectly.
+
+| Method | Original [1] | Ours |
+|:-:|:-:|:-:|
+| Source-only | 63.6 % |  60.4 % (20 epoch)|
+| Target-only | 96.4 % |  95.9 % (20 epoch)|
+| PixelDA | 98.2 %  |  97.6 % (100 epoch) |
+
 ## Usage
 
 ### Training source-only model (training on MNIST, test on MNIST-M)
@@ -27,18 +37,9 @@ python train_gan.py --gpu gpuno --out directory_out
 
 ![generated](pixelda_result.png)
 
-![loss](pixelda_loss.png)
-![accuracy](pixelda_accuracy.png)
-
-## Performance on MNIST -> MNIST-M
-
-Note that this is not reproduced perfectly.
-
-| Method | Original [1] | Ours |
-|:-:|:-:|:-:|
-| Source-only | 63.6 % |  60.4 % (20 epoch)|
-| Target-only | 96.4 % |  95.9 % (20 epoch)|
-| PixelDA | 98.2 %  |  97.6 % (100 epoch) |
+Loss curve                 |  Accuracy
+:-------------------------:|:-------------------------:
+![](pixelda_loss.png)      |  ![](pixelda_accuracy.png)
 
 ## References
 - [1]: K. Bousmalis, et al. "Unsupervised Pixel-Level Domain Adaptation with Generative Adversarial Networks.", in CVPR, 2017.
