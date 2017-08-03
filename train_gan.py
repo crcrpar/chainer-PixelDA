@@ -108,9 +108,11 @@ def main():
     snapshot_interval = (1, 'epoch')
     display_interval = (10, 'iteration')
 
-    trainer.extend(
-        extensions.ExponentialShift('alpha', params['alpha_decay_rate']),
-        trigger=(params['alpha_decay_steps'], 'iteration'))
+    for opt in [opt_gen, opt_cls, opt_dis]:
+        trainer.extend(
+            extensions.ExponentialShift('alpha', params['alpha_decay_rate'],
+                                        optimizer=opt),
+            trigger=(params['alpha_decay_steps'], 'iteration'))
     trainer.extend(
         extensions.snapshot(filename='snapshot_epoch_{.updater.epoch}.npz'),
         trigger=snapshot_interval)

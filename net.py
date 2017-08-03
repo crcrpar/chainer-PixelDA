@@ -20,6 +20,7 @@ class Extractor(chainer.Chain):
 class DigitClassifier(chainer.Chain):
     def __init__(self, n_class=10):
         super(DigitClassifier, self).__init__()
+        self.use_source_extractor = False
         with self.init_scope():
             self.source_extractor = Extractor()
             self.generated_extractor = Extractor()
@@ -28,8 +29,8 @@ class DigitClassifier(chainer.Chain):
             self.fc2 = L.Linear(100)
             self.fc3 = L.Linear(n_class)
 
-    def __call__(self, x, use_source_extractor=False):
-        if use_source_extractor:
+    def __call__(self, x):
+        if self.use_source_extractor:
             h = self.source_extractor(x)
         else:
             h = self.generated_extractor(x)
