@@ -1,0 +1,8 @@
+# Difference between this impl. and original impl.
+crop down to desired size (e.g. 32x32 -> 28x28)
+	dif = net.shape.as_list()[1] - outdim
+	low = dif / 2
+	high = net.shape.as_list()[1] - low
+	net = net[:, low:high, low:high, :]
+
+# clip_gradient_norm=5.0,

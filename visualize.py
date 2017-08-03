@@ -2,11 +2,10 @@
 
 import os
 
-import numpy as np
-from PIL import Image
-
 import chainer
 import chainer.cuda
+import numpy as np
+from PIL import Image
 from chainer import Variable
 
 
@@ -29,9 +28,10 @@ def out_generated_image(gen, dis, rows, cols, seed, dst):
         x = x.reshape((rows * H, cols * W, 3))
 
         preview_dir = '{}/preview'.format(dst)
-        preview_path = preview_dir +\
-            '/image{:0>8}.png'.format(trainer.updater.iteration)
+        preview_path = preview_dir + \
+                       '/image{:0>8}.png'.format(trainer.updater.iteration)
         if not os.path.exists(preview_dir):
             os.makedirs(preview_dir)
         Image.fromarray(x).save(preview_path)
+
     return make_image

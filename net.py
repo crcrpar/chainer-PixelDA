@@ -108,7 +108,8 @@ class DisBlock(chainer.Chain):
 
     def __call__(self, x):
         # TODO check if the position of add_noise is OK
-        return F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(x)))), params['dropout_prob'])
+        return F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(x)))),
+                         params['dropout_prob'])
 
 
 class Discriminator(chainer.Chain):

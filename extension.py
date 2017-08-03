@@ -1,9 +1,8 @@
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-
 import os
 
 import chainer
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 from chainer import Variable
 from chainer.dataset import convert
 

@@ -1,6 +1,7 @@
 import numpy as np
-from opt import pixel_min
+
 from opt import pixel_max
+from opt import pixel_min
 
 
 def gray2rgb(in_data):

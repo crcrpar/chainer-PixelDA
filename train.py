@@ -11,7 +11,6 @@ import argparse
 
 import chainer
 import chainer.links as L
-import numpy as np
 from chainer import training
 from chainer.datasets import TransformDataset
 from chainer.iterators import MultiprocessIterator
@@ -19,7 +18,6 @@ from chainer.training import extensions
 
 from mnist_m import get_mnist_m
 from net import DigitClassifier
-
 from util import gray2rgb
 from util import scale
 
