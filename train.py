@@ -21,6 +21,8 @@ from net import DigitClassifier
 from util import gray2rgb
 from util import scale
 
+from opt import params
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -105,6 +107,12 @@ def main():
             extensions.PlotReport(
                 ['main/accuracy', 'validation/main/accuracy'],
                 'epoch', file_name='accuracy.png'))
+
+    # Exponential learning weight decay
+    trainer.extend(
+        extensions.ExponentialShift('alpha', params['alpha_decay_rate'],
+                                    optimizer=optimizer),
+        trigger=(params['alpha_decay_steps'], 'iteration'))
 
     # Print selected entries of the log to stdout
     # Here "main" refers to the target link of the "main" optimizer again, and

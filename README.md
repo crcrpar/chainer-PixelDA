@@ -9,14 +9,13 @@ This is an unofficial chainer re-implementation of a paper, Unsupervised Pixel-L
 - Matplotlib
 
 ## Performance on MNIST -> MNIST-M
-
 Note that this is not reproduced perfectly.
-
+Batchsize=32, #epoch=200.
 | Method | Original [1] | Ours |
 |:-:|:-:|:-:|
-| Source-only | 63.6 % |  60.4 % (20 epoch)|
-| Target-only | 96.4 % |  95.9 % (20 epoch)|
-| PixelDA | 98.2 %  |  97.6 % (100 epoch) |
+| Source-only | 63.6 % |  59.5 % |
+| Target-only | 96.4 % |  95.9 % |
+| PixelDA | 98.2 %  |  98.0 % |
 
 ## Usage
 
