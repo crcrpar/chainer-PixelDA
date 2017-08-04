@@ -19,6 +19,9 @@ Batchsize=32, #epoch=200.
 
 ## Usage
 
+### Preprocess
+Download MNIST-M dataset from [here](https://www.dropbox.com/s/mbv02veynifs8a4/mnistm_data.pkl?dl=0) (in .pkl format).
+
 ### Training source-only model (training on MNIST, test on MNIST-M)
 ```
 python train.py source_only --gpu gpuno --out directory_out
