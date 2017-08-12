@@ -51,9 +51,19 @@ def main():
     print('')
 
     # Set up a neural network to train
-    gen = Generator()
-    dis = Discriminator()
-    cls = L.Classifier(DigitClassifier())
+    gen = Generator(
+        n_hidden=params['gen']['n_hidden'],
+        n_resblock=params['gen']['n_resblock'],
+        n_ch=params['gen']['n_ch'], wscale=params['gaussian_wscale'],
+        res=params['res_image'], bn_eps=params['bn_eps'])
+
+    dis = Discriminator(
+        n_ch=params['dis']['n_ch'], wscale=params['gaussian_wscale'],
+        bn_eps=params['bn_eps'], dr_prob=params['dis']['dropout_prob'],
+        noise_sigma=params['dis']['noise_sigma']
+    )
+
+    cls = L.Classifier(DigitClassifier(n_class=params['n_class']))
 
     if args.gpu >= 0:
         chainer.cuda.get_device_from_id(args.gpu).use()
@@ -61,13 +71,14 @@ def main():
         dis.to_gpu()
         cls.to_gpu()
 
+    p_opt = params['optimize']
     # Setup an optimizer
     def make_optimizer(model):
-        optimizer = chainer.optimizers.Adam(alpha=params['base_lr'],
-                                            beta1=params['beta1'])
+        optimizer = chainer.optimizers.Adam(alpha=p_opt['base_lr'],
+                                            beta1=p_opt['beta1'])
         optimizer.setup(model)
         optimizer.add_hook(
-            chainer.optimizer.WeightDecay(params['weight_decay']))
+            chainer.optimizer.WeightDecay(p_opt['weight_decay']))
         return optimizer
 
     opt_gen = make_optimizer(gen)
@@ -110,9 +121,9 @@ def main():
 
     for opt in [opt_gen, opt_cls, opt_dis]:
         trainer.extend(
-            extensions.ExponentialShift('alpha', params['alpha_decay_rate'],
+            extensions.ExponentialShift('alpha', p_opt['alpha_decay_rate'],
                                         optimizer=opt),
-            trigger=(params['alpha_decay_steps'], 'iteration'))
+            trigger=(p_opt['alpha_decay_steps'], 'iteration'))
     trainer.extend(
         extensions.snapshot(filename='snapshot_epoch_{.updater.epoch}.npz'),
         trigger=snapshot_interval)

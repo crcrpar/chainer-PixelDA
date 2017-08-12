@@ -37,17 +37,17 @@ class UPLDAGANUpdater(chainer.training.StandardUpdater):
         # sigmoid_cross_entropy(x,0) = softplus(x)
         loss_dis = F.sum(F.softplus(-y_real)) / batchsize
         loss_dis += F.sum(F.softplus(y_fake)) / batchsize
-        loss_dis *= params['dis_loss']
+        loss_dis *= params['loss']['dis']
 
         loss_gen = F.sum(F.softplus(-y_fake)) / batchsize
-        loss_gen *= params['gen_loss']
+        loss_gen *= params['loss']['gen']
 
         self.cls.predictor.use_source_extractor = True
         loss_cls = self.cls(source_image, source_label)
         self.cls.predictor.use_source_extractor = False
         loss_cls += self.cls(x_fake, source_label)
 
-        loss_cls *= params['task_loss']
+        loss_cls *= params['loss']['task']
 
         """
             In the original paper, 

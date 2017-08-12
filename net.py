@@ -4,8 +4,6 @@ import chainer.links as L
 import numpy
 from chainer import cuda
 
-from opt import params
-
 
 class Extractor(chainer.Chain):
     def __init__(self):
@@ -18,7 +16,7 @@ class Extractor(chainer.Chain):
 
 
 class DigitClassifier(chainer.Chain):
-    def __init__(self, n_class=10):
+    def __init__(self, n_class):
         super(DigitClassifier, self).__init__()
         self.use_source_extractor = False
         with self.init_scope():
@@ -41,15 +39,15 @@ class DigitClassifier(chainer.Chain):
 
 
 class GenResBlock(chainer.Chain):
-    def __init__(self, out_channel, w):
+    def __init__(self, n_out_ch, initialW, bn_eps):
         super(GenResBlock, self).__init__()
         with self.init_scope():
-            self.conv1 = L.Convolution2D(None, out_channel, ksize=3, stride=1,
-                                         pad=1, initialW=w)
-            self.conv2 = L.Convolution2D(None, out_channel, ksize=3, stride=1,
-                                         pad=1, initialW=w)
-            self.bn1 = L.BatchNormalization(out_channel, eps=params['bn_eps'])
-            self.bn2 = L.BatchNormalization(out_channel, eps=params['bn_eps'])
+            self.conv1 = L.Convolution2D(None, n_out_ch, ksize=3, stride=1,
+                                         pad=1, initialW=initialW)
+            self.conv2 = L.Convolution2D(None, n_out_ch, ksize=3, stride=1,
+                                         pad=1, initialW=initialW)
+            self.bn1 = L.BatchNormalization(n_out_ch, eps=bn_eps)
+            self.bn2 = L.BatchNormalization(n_out_ch, eps=bn_eps)
 
     def __call__(self, x):
         h = F.relu(self.bn1(self.conv1(x)))
@@ -58,19 +56,19 @@ class GenResBlock(chainer.Chain):
 
 
 class Generator(chainer.Chain):
-    def __init__(self, n_hidden=10, n_resblock=6, ch=64, wscale=0.02, res=28):
+    def __init__(self, n_hidden, n_resblock, n_ch, wscale, res, bn_eps):
         super(Generator, self).__init__()
-        self.ch = ch
         self.n_resblock = n_resblock
         self.n_hidden = n_hidden
         self.res = res
         with self.init_scope():
             w = chainer.initializers.Normal(wscale)
             self.fc = L.Linear(None, self.res * self.res, initialW=w)
-            self.conv1 = L.Convolution2D(None, ch, ksize=3, stride=1, pad=1,
+            self.conv1 = L.Convolution2D(None, n_ch, ksize=3, stride=1, pad=1,
                                          initialW=w)
             for i in range(1, self.n_resblock + 1):
-                setattr(self, 'block{:d}'.format(i), GenResBlock(ch, w))
+                setattr(self, 'block{:d}'.format(i),
+                        GenResBlock(n_ch, w, bn_eps))
             self.conv2 = L.Convolution2D(None, 3, ksize=3, stride=1, pad=1,
                                          initialW=w)
 
@@ -88,7 +86,7 @@ class Generator(chainer.Chain):
         return F.tanh(self.conv2(h))
 
 
-def add_noise(h, sigma=0.2):
+def add_noise(h, sigma):
     xp = cuda.get_array_module(h.data)
     if chainer.config.train:
         return h + sigma * xp.random.randn(*h.shape)
@@ -97,40 +95,43 @@ def add_noise(h, sigma=0.2):
 
 
 class DisBlock(chainer.Chain):
-    def __init__(self, out_channel, initialW):
+    def __init__(self, n_out_ch, initialW, bn_eps, dr_prob, noise_sigma):
         super(DisBlock, self).__init__()
+        self.dr_prob = dr_prob
+        self.noise_sigma = noise_sigma
         with self.init_scope():
-            self.conv = L.Convolution2D(None, out_channel, ksize=3, stride=2,
+            self.conv = L.Convolution2D(None, n_out_ch, ksize=3, stride=2,
                                         pad=1, initialW=initialW)
             # TODO check if use_gamma=False is OK
-            self.bn = L.BatchNormalization(out_channel, eps=params['bn_eps'],
+            self.bn = L.BatchNormalization(n_out_ch, eps=bn_eps,
                                            use_gamma=False)
 
     def __call__(self, x):
-        # TODO check if the position of add_noise is OK
-        return F.dropout(F.leaky_relu(add_noise(self.bn(self.conv(x)))),
-                         params['dropout_prob'])
+        return add_noise(F.dropout(F.leaky_relu(self.conv(x)), self.dr_prob),
+                         self.noise_sigma)
 
 
 class Discriminator(chainer.Chain):
-    def __init__(self, ch=512, wscale=0.02):
+    def __init__(self, n_ch, wscale, bn_eps, dr_prob, noise_sigma):
         super(Discriminator, self).__init__()
-        # ch = 512 in mnist-m experiment
-        self.ch = ch
-        self.n_ch_list = [ch // 8, ch // 4, ch // 2, ch]
+        self.dr_prob = dr_prob
+        self.noise_sigma = noise_sigma
+        self.n_ch_list = [n_ch // 8, n_ch // 4, n_ch // 2, n_ch]
         w = chainer.initializers.Normal(wscale)
         with self.init_scope():
             self.conv = L.Convolution2D(None, 64, ksize=3, stride=1, pad=1,
                                         initialW=w)
             for i, n_ch in enumerate(self.n_ch_list):
-                setattr(self, 'block{:d}'.format(i + 1), DisBlock(n_ch, w))
+                setattr(self, 'block{:d}'.format(i + 1),
+                        DisBlock(n_ch, w, bn_eps, self.dr_prob,
+                                 self.noise_sigma))
             self.fc = L.Linear(None, 1, initialW=w)
 
     def __call__(self, x):
-        h = add_noise(x)
-        #  No bn for the first input
-        h = add_noise(
-            F.dropout(F.leaky_relu(self.conv(h)), params['dropout_prob']))
+        h = add_noise(x, self.noise_sigma)  # No bn for the first input
+        h = add_noise(F.dropout(F.leaky_relu(self.conv(h)), self.dr_prob),
+                      self.noise_sigma)
+
         for i in range(1, len(self.n_ch_list) + 1):
             h = self['block{:d}'.format(i)](h)
         return self.fc(h)
