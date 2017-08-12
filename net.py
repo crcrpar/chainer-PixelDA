@@ -62,15 +62,15 @@ class Generator(chainer.Chain):
         self.n_hidden = n_hidden
         self.res = res
         with self.init_scope():
-            w = chainer.initializers.Normal(wscale)
-            self.fc = L.Linear(None, self.res * self.res, initialW=w)
+            initialW = chainer.initializers.Normal(wscale)
+            self.fc = L.Linear(None, self.res * self.res, initialW=initialW)
             self.conv1 = L.Convolution2D(None, n_ch, ksize=3, stride=1, pad=1,
-                                         initialW=w)
+                                         initialW=initialW)
             for i in range(1, self.n_resblock + 1):
                 setattr(self, 'block{:d}'.format(i),
-                        GenResBlock(n_ch, w, bn_eps))
+                        GenResBlock(n_ch, initialW, bn_eps))
             self.conv2 = L.Convolution2D(None, 3, ksize=3, stride=1, pad=1,
-                                         initialW=w)
+                                         initialW=initialW)
 
     def make_hidden(self, batchsize):
         return numpy.random.uniform(-1, 1, (batchsize, self.n_hidden)) \
@@ -107,8 +107,9 @@ class DisBlock(chainer.Chain):
                                            use_gamma=False)
 
     def __call__(self, x):
-        return add_noise(F.dropout(F.leaky_relu(self.conv(x)), self.dr_prob),
-                         self.noise_sigma)
+        return add_noise(
+            F.dropout(F.leaky_relu(self.bn(self.conv(x))), self.dr_prob),
+            self.noise_sigma)
 
 
 class Discriminator(chainer.Chain):
@@ -117,15 +118,15 @@ class Discriminator(chainer.Chain):
         self.dr_prob = dr_prob
         self.noise_sigma = noise_sigma
         self.n_ch_list = [n_ch // 8, n_ch // 4, n_ch // 2, n_ch]
-        w = chainer.initializers.Normal(wscale)
+        initialW = chainer.initializers.Normal(wscale)
         with self.init_scope():
             self.conv = L.Convolution2D(None, 64, ksize=3, stride=1, pad=1,
-                                        initialW=w)
+                                        initialW=initialW)
             for i, n_ch in enumerate(self.n_ch_list):
                 setattr(self, 'block{:d}'.format(i + 1),
-                        DisBlock(n_ch, w, bn_eps, self.dr_prob,
+                        DisBlock(n_ch, initialW, bn_eps, self.dr_prob,
                                  self.noise_sigma))
-            self.fc = L.Linear(None, 1, initialW=w)
+            self.fc = L.Linear(None, 1, initialW=initialW)
 
     def __call__(self, x):
         h = add_noise(x, self.noise_sigma)  # No bn for the first input
