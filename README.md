@@ -11,6 +11,7 @@ This is an unofficial chainer re-implementation of a paper, Unsupervised Pixel-L
 ## Performance on MNIST -> MNIST-M
 Note that this is not reproduced perfectly.
 Batchsize=32, #epoch=200.
+
 | Method | Original [1] | Ours |
 |:-:|:-:|:-:|
 | Source-only | 63.6 % |  59.5 % |
