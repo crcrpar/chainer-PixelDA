@@ -20,7 +20,7 @@ from net import DigitClassifier
 from net import Discriminator
 from net import Generator
 from opt import params
-from updater import UPLDAGANUpdater
+from updater import PixelDAUpdater
 from util import gray2rgb
 from util import scale
 
@@ -108,7 +108,7 @@ def main():
         target_train, args.batchsize, n_processes=args.n_processes)
 
     # Set up a trainer
-    updater = UPLDAGANUpdater(
+    updater = PixelDAUpdater(
         models=(gen, dis, cls),
         iterator={'main': source_iter, 'target': target_train_iter},
         optimizer={

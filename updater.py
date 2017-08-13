@@ -7,10 +7,10 @@ from chainer import Variable
 from opt import params
 
 
-class UPLDAGANUpdater(chainer.training.StandardUpdater):
+class PixelDAUpdater(chainer.training.StandardUpdater):
     def __init__(self, *args, **kwargs):
         self.gen, self.dis, self.cls = kwargs.pop('models')
-        super(UPLDAGANUpdater, self).__init__(*args, **kwargs)
+        super(PixelDAUpdater, self).__init__(*args, **kwargs)
 
     def update_core(self):
         gen_optimizer = self.get_optimizer('gen')
